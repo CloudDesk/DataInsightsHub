@@ -35,7 +35,7 @@ const generateSqlQueryPrompt = ai.definePrompt({
   prompt: `You are an expert SQL query generator. Given a database schema and a natural language prompt, you will generate two separate SQL queries based on the same condition.
 
 1.  **Report Query**: This query should return detailed records that meet the user's condition. The output should include all relevant fields for each matching record.
-2.  **Dashboard Query**: This query should return a summary/aggregate count that can be visualized (e.g., in a bar or pie chart). It should include a count of records matching the condition, and a count of non-matching records as a comparison (e.g., labeled as "Others").
+2.  **Dashboard Query**: This query should return a summary/aggregate count that can be visualized (e.g., in a bar or pie chart). It should include a count of records matching the condition, and a count of non-matching records as a comparison (e.g., labeled as "Others"). The non-matching records should represent all other possibilities outside the user's specified condition.
 
 **Examples:**
 
@@ -45,6 +45,10 @@ const generateSqlQueryPrompt = ai.definePrompt({
 *   **User prompt:** "Count the drivers who have rating 3 or above."
     *   **Report Query Goal:** Return all driver records where rating >= 3.
     *   **Dashboard Query Goal:** Return count of drivers with rating >= 3 and count of drivers with rating < 3.
+*   **User prompt:** "Count of drivers who has rating between '3' to '5'"
+    *   **Report Query Goal:** Return all driver records where rating BETWEEN 3 AND 5.
+    *   **Dashboard Query Goal:** Return count of drivers with rating between 3 and 5, and a count of all other drivers (rating < 3 OR rating > 5) labeled as "Others".
+
 
 Always ensure both queries align with the intent of the user, but structure them for two different use cases: detailed tabular view (report) and high-level visual summary (dashboard).
 
