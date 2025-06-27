@@ -15,6 +15,7 @@ import { ReportTab } from '@/components/report-tab';
 import { DashboardTab } from '@/components/dashboard-tab';
 import { runQuery } from './actions';
 import { addSavedQuery, deleteSavedQuery, getSavedQueries } from './firestore-actions';
+import { Separator } from '@/components/ui/separator';
 
 export default function Home() {
   const [schema, setSchema] = React.useState<string>('');
@@ -319,21 +320,23 @@ export default function Home() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-3 md:w-fit md:mx-auto">
-            <TabsTrigger value="query">
-              <MessageSquare className="mr-2" />
-              Query
+            <TabsTrigger value="dashboard" disabled={!dashboardResult}>
+              <LineChart className="mr-2" />
+              Dashboard
             </TabsTrigger>
             <TabsTrigger value="report" disabled={!reportResult}>
               <Table className="mr-2" />
               Report
             </TabsTrigger>
-            <TabsTrigger value="dashboard" disabled={!dashboardResult}>
-              <LineChart className="mr-2" />
-              Dashboard
+            <TabsTrigger value="query">
+              <MessageSquare className="mr-2" />
+              Query
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="query" className="mt-6">
+          <Separator className="mt-4" />
+
+          <TabsContent value="query" className="mt-4">
             <QueryTab
               onFileUpload={handleFileUpload}
               uploadedFileName={uploadedFileName}
@@ -352,10 +355,10 @@ export default function Home() {
               verifyingQueryId={verifyingQueryId}
             />
           </TabsContent>
-          <TabsContent value="report" className="mt-6">
+          <TabsContent value="report" className="mt-4">
             <ReportTab queryResult={reportResult} isLoading={isLoading} />
           </TabsContent>
-          <TabsContent value="dashboard" className="mt-6">
+          <TabsContent value="dashboard" className="mt-4">
             <DashboardTab queryResult={dashboardResult} isLoading={isLoading} />
           </TabsContent>
         </Tabs>
