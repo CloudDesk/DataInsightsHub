@@ -14,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { QueryTab } from '@/components/query-tab';
 import { ReportTab } from '@/components/report-tab';
 import { DashboardTab } from '@/components/dashboard-tab';
-import { runQuery } from './actions';
+import { runQuery, fetchSchemaFromUrl } from './actions';
 import { addSavedQuery, deleteSavedQuery, getSavedQueries } from './firestore-actions';
 import { Separator } from '@/components/ui/separator';
 
@@ -264,11 +264,7 @@ export default function Home() {
     const url = 'https://storage.googleapis.com/tendly/query/RootCabsTableDetails%20(1).xlsx';
     
     try {
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch schema: ${response.statusText}`);
-      }
-      const data = await response.arrayBuffer();
+      const data = await fetchSchemaFromUrl(url);
       
       const workbook = XLSX.read(data, { type: 'array' });
       let schemaDescription = '';
