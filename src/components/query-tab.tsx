@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Loader2, Wand2, Plus, Trash2, Play, ShieldCheck } from 'lucide-react';
+import { Loader2, Wand2, Plus, Trash2, Play, ShieldCheck, DownloadCloud } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils';
 
 interface QueryTabProps {
   onFileUpload: (file: File) => void;
+  onLoadSchemaFromUrl: () => void;
   uploadedFileName: string | null;
   prompt: string;
   setPrompt: (prompt: string) => void;
@@ -82,22 +83,23 @@ function AddQueryDialog({ onSave }: { onSave: (name: string, query: string) => v
 
 interface SchemaUploadCardProps {
   onFileUpload: (file: File) => void;
+  onLoadSchemaFromUrl: () => void;
   uploadedFileName: string | null;
   isLoading: boolean;
   stepNumber?: number;
   description: string;
 }
 
-function SchemaUploadCard({ onFileUpload, uploadedFileName, isLoading, stepNumber, description }: SchemaUploadCardProps) {
+function SchemaUploadCard({ onFileUpload, onLoadSchemaFromUrl, uploadedFileName, isLoading, stepNumber, description }: SchemaUploadCardProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{stepNumber ? `${stepNumber}. ` : ''}Upload Schema</CardTitle>
+        <CardTitle>{stepNumber ? `${stepNumber}. ` : ''}Provide Schema</CardTitle>
         <CardDescription>{description}</CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-2">
-          <Label htmlFor="schema-upload">Schema File (.xlsx, .xls)</Label>
+      <CardContent className="space-y-4">
+        <div>
+          <Label htmlFor="schema-upload">Upload from computer</Label>
           <Input
             id="schema-upload"
             type="file"
@@ -108,14 +110,33 @@ function SchemaUploadCard({ onFileUpload, uploadedFileName, isLoading, stepNumbe
               }
             }}
             disabled={isLoading}
-            className="cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+            className="mt-1 cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
           />
-          {uploadedFileName && (
-            <p className="text-sm text-muted-foreground mt-2">
-              Uploaded: <span className="font-medium">{uploadedFileName}</span>
-            </p>
-          )}
         </div>
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-card px-2 text-muted-foreground">
+              Or
+            </span>
+          </div>
+        </div>
+        <Button 
+          variant="outline" 
+          className="w-full"
+          onClick={onLoadSchemaFromUrl}
+          disabled={isLoading}
+        >
+          {isLoading ? ( <Loader2 className="mr-2 h-4 w-4 animate-spin" />) : (<DownloadCloud className="mr-2 h-4 w-4" />)}
+          Load from URL
+        </Button>
+        {uploadedFileName && (
+          <p className="text-sm text-muted-foreground text-center pt-2">
+            Loaded Schema: <span className="font-medium">{uploadedFileName}</span>
+          </p>
+        )}
       </CardContent>
     </Card>
   );
@@ -124,6 +145,7 @@ function SchemaUploadCard({ onFileUpload, uploadedFileName, isLoading, stepNumbe
 
 function GenerateQueryView({
   onFileUpload,
+  onLoadSchemaFromUrl,
   uploadedFileName,
   prompt,
   setPrompt,
@@ -131,15 +153,16 @@ function GenerateQueryView({
   onSubmit,
   reportQuery,
   dashboardQuery
-}: Pick<QueryTabProps, 'onFileUpload' | 'uploadedFileName' | 'prompt' | 'setPrompt' | 'isLoading' | 'onSubmit' | 'reportQuery' | 'dashboardQuery'>) {
+}: Pick<QueryTabProps, 'onFileUpload' | 'onLoadSchemaFromUrl' | 'uploadedFileName' | 'prompt' | 'setPrompt' | 'isLoading' | 'onSubmit' | 'reportQuery' | 'dashboardQuery'>) {
   return (
     <div className="space-y-6">
       <SchemaUploadCard
         onFileUpload={onFileUpload}
+        onLoadSchemaFromUrl={onLoadSchemaFromUrl}
         uploadedFileName={uploadedFileName}
         isLoading={isLoading}
         stepNumber={1}
-        description="Upload an Excel file with your database schema. Each sheet should represent a table, with 'Field Name' and 'Description' columns."
+        description="Provide an Excel file with your database schema by uploading it or loading from a default URL. Each sheet should represent a table, with 'Field Name' and 'Description' columns."
       />
 
       <Card>
@@ -210,14 +233,15 @@ function GenerateQueryView({
   );
 }
 
-function RawQueryView({ savedQueries, onAddQuery, onDeleteQuery, onRunRawQuery, onVerifyQuery, verificationResult, verifyingQueryId, isLoading, onFileUpload, uploadedFileName }: Pick<QueryTabProps, 'savedQueries' | 'onAddQuery' | 'onDeleteQuery' | 'onRunRawQuery' | 'onVerifyQuery' | 'verificationResult' | 'verifyingQueryId' | 'isLoading' | 'onFileUpload' | 'uploadedFileName'>) {
+function RawQueryView({ savedQueries, onAddQuery, onDeleteQuery, onRunRawQuery, onVerifyQuery, verificationResult, verifyingQueryId, isLoading, onFileUpload, onLoadSchemaFromUrl, uploadedFileName }: Pick<QueryTabProps, 'savedQueries' | 'onAddQuery' | 'onDeleteQuery' | 'onRunRawQuery' | 'onVerifyQuery' | 'verificationResult' | 'verifyingQueryId' | 'isLoading' | 'onFileUpload' | 'onLoadSchemaFromUrl' | 'uploadedFileName'>) {
   return (
     <div className="space-y-6">
         <SchemaUploadCard
             onFileUpload={onFileUpload}
+            onLoadSchemaFromUrl={onLoadSchemaFromUrl}
             uploadedFileName={uploadedFileName}
             isLoading={isLoading}
-            description="Optionally upload a schema to enable more accurate verification for your raw queries."
+            description='Optionally provide a schema by uploading or loading from URL to enable more accurate verification for your raw queries.'
         />
         <Card>
         <CardHeader className="flex flex-row items-center justify-between">

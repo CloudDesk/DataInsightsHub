@@ -177,7 +177,6 @@ export default function Home() {
     }
   };
 
-
   const handleFileUpload = (file: File) => {
     setIsLoading(true);
     setUploadedFileName(file.name);
@@ -257,6 +256,76 @@ export default function Home() {
 
     reader.readAsBinaryString(file);
   };
+
+  const handleLoadSchemaFromUrl = async () => {
+    setIsLoading(true);
+    setUploadedFileName(null);
+    setSchema('');
+    const url = 'https://storage.googleapis.com/tendly/query/RootCabsTableDetails%20(1).xlsx';
+    
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch schema: ${response.statusText}`);
+      }
+      const data = await response.arrayBuffer();
+      
+      const workbook = XLSX.read(data, { type: 'array' });
+      let schemaDescription = '';
+
+      workbook.SheetNames.forEach(sheetName => {
+        const cleanSheetName = sheetName.trim();
+        if (cleanSheetName) {
+          schemaDescription += `Table: ${cleanSheetName}\n`;
+          const worksheet = workbook.Sheets[sheetName];
+          const json: any[] = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+
+          if (json.length > 0) {
+            const columns = json
+              .map(row => {
+                const fieldName = row['Field Name'] || row['fieldName'] || row['field_name'];
+                const description = row['Description'] || row['description'];
+                if (fieldName && typeof fieldName === 'string' && fieldName.trim()) {
+                  return `- ${fieldName.trim()}: ${String(description || 'No description').trim()}`;
+                }
+                return null;
+              })
+              .filter(Boolean);
+            
+            if (columns.length > 0) {
+              schemaDescription += 'Columns:\n' + columns.join('\n') + '\n';
+            }
+          }
+          schemaDescription += '\n';
+        }
+      });
+      
+      const finalSchema = schemaDescription.trim();
+      if (!finalSchema) {
+         throw new Error('No valid schema data found in the Excel file. Please check sheet names and column headers (e.g., "Field Name", "Description").');
+      }
+      setSchema(finalSchema);
+      setUploadedFileName('RootCabsTableDetails.xlsx (from URL)');
+      toast({
+        title: 'Success',
+        description: 'Schema loaded successfully from URL.'
+      })
+
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+        console.error("Error loading schema from URL:", error);
+        toast({
+            variant: 'destructive',
+            title: 'Schema Load Error',
+            description: errorMessage,
+        });
+        setUploadedFileName(null);
+        setSchema('');
+    } finally {
+        setIsLoading(false);
+    }
+  };
+
 
   const handleGenerateQuery = async () => {
     if (!prompt.trim() || !schema.trim()) {
@@ -340,6 +409,7 @@ export default function Home() {
           <TabsContent value="query" className="mt-4">
             <QueryTab
               onFileUpload={handleFileUpload}
+              onLoadSchemaFromUrl={handleLoadSchemaFromUrl}
               uploadedFileName={uploadedFileName}
               prompt={prompt}
               setPrompt={setPrompt}
