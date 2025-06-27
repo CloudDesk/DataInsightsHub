@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -20,7 +21,7 @@ import { Separator } from '@/components/ui/separator';
 export default function Home() {
   const [schema, setSchema] = React.useState<string>('');
   const [uploadedFileName, setUploadedFileName] = React.useState<string | null>(null);
-  const [prompt, setPrompt] = React.useState<string>('Show me total sales per category for the last quarter.');
+  const [prompt, setPrompt] = React.useState<string>('');
   const [reportQuery, setReportQuery] = React.useState<string>('');
   const [dashboardQuery, setDashboardQuery] = React.useState<string>('');
   const [reportResult, setReportResult] = React.useState<QueryResult | null>(null);
