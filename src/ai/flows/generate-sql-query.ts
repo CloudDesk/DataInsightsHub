@@ -43,6 +43,7 @@ const generateSqlQueryPrompt = ai.definePrompt({
     *   The second row should contain data for the 'Others' category.
 
 **Rules:**
+*   You MUST use the exact table and column names as provided in the schema. Do not change them (e.g., from plural to singular).
 *   Use the same user prompt for both queries.
 *   Don't simply count rows unless the prompt explicitly asks for a count. Focus on total, sum, count, or category-based aggregation for the dashboard output.
 
