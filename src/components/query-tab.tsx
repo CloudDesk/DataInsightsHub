@@ -15,7 +15,7 @@ import {
   DialogFooter,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import type { SavedQuery } from '@/app/page';
+import type { SavedQuery } from '@/lib/types';
 import type { VerifySqlQueryOutput } from '@/ai/flows/verify-sql-query';
 import { cn } from '@/lib/utils';
 
@@ -80,6 +80,48 @@ function AddQueryDialog({ onSave }: { onSave: (name: string, query: string) => v
   );
 }
 
+interface SchemaUploadCardProps {
+  onFileUpload: (file: File) => void;
+  uploadedFileName: string | null;
+  isLoading: boolean;
+  stepNumber?: number;
+  description: string;
+}
+
+function SchemaUploadCard({ onFileUpload, uploadedFileName, isLoading, stepNumber, description }: SchemaUploadCardProps) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{stepNumber ? `${stepNumber}. ` : ''}Upload Schema</CardTitle>
+        <CardDescription>{description}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-2">
+          <Label htmlFor="schema-upload">Schema File (.xlsx, .xls)</Label>
+          <Input
+            id="schema-upload"
+            type="file"
+            accept=".xlsx, .xls"
+            onChange={(e) => {
+              if (e.target.files && e.target.files[0]) {
+                onFileUpload(e.target.files[0]);
+              }
+            }}
+            disabled={isLoading}
+            className="cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+          />
+          {uploadedFileName && (
+            <p className="text-sm text-muted-foreground mt-2">
+              Uploaded: <span className="font-medium">{uploadedFileName}</span>
+            </p>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+
 function GenerateQueryView({
   onFileUpload,
   uploadedFileName,
@@ -89,39 +131,16 @@ function GenerateQueryView({
   onSubmit,
   reportQuery,
   dashboardQuery
-}: Omit<QueryTabProps, 'savedQueries' | 'onAddQuery' | 'onDeleteQuery' | 'onRunRawQuery' | 'onVerifyQuery' | 'verificationResult' | 'verifyingQueryId'>) {
+}: Pick<QueryTabProps, 'onFileUpload' | 'uploadedFileName' | 'prompt' | 'setPrompt' | 'isLoading' | 'onSubmit' | 'reportQuery' | 'dashboardQuery'>) {
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>1. Upload Schema</CardTitle>
-          <CardDescription>
-            Upload an Excel file with your database schema. Each sheet should represent a table, with 'Field Name' and 'Description' columns.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            <Label htmlFor="schema-upload">Schema File (.xlsx, .xls)</Label>
-            <Input
-              id="schema-upload"
-              type="file"
-              accept=".xlsx, .xls"
-              onChange={(e) => {
-                if (e.target.files && e.target.files[0]) {
-                  onFileUpload(e.target.files[0]);
-                }
-              }}
-              disabled={isLoading}
-              className="cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
-            />
-            {uploadedFileName && (
-              <p className="text-sm text-muted-foreground mt-2">
-                Uploaded: <span className="font-medium">{uploadedFileName}</span>
-              </p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      <SchemaUploadCard
+        onFileUpload={onFileUpload}
+        uploadedFileName={uploadedFileName}
+        isLoading={isLoading}
+        stepNumber={1}
+        description="Upload an Excel file with your database schema. Each sheet should represent a table, with 'Field Name' and 'Description' columns."
+      />
 
       <Card>
         <CardHeader>
@@ -191,82 +210,90 @@ function GenerateQueryView({
   );
 }
 
-function RawQueryView({ savedQueries, onAddQuery, onDeleteQuery, onRunRawQuery, onVerifyQuery, verificationResult, verifyingQueryId, isLoading }: Pick<QueryTabProps, 'savedQueries' | 'onAddQuery' | 'onDeleteQuery' | 'onRunRawQuery' | 'onVerifyQuery' | 'verificationResult' | 'verifyingQueryId' | 'isLoading'>) {
+function RawQueryView({ savedQueries, onAddQuery, onDeleteQuery, onRunRawQuery, onVerifyQuery, verificationResult, verifyingQueryId, isLoading, onFileUpload, uploadedFileName }: Pick<QueryTabProps, 'savedQueries' | 'onAddQuery' | 'onDeleteQuery' | 'onRunRawQuery' | 'onVerifyQuery' | 'verificationResult' | 'verifyingQueryId' | 'isLoading' | 'onFileUpload' | 'uploadedFileName'>) {
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div>
-          <CardTitle>Raw SQL Queries</CardTitle>
-          <CardDescription>
-            Manage, run, and verify your saved raw SQL queries directly.
-          </CardDescription>
-        </div>
-        <AddQueryDialog onSave={onAddQuery} />
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {savedQueries.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">
-              No saved queries yet. Click "Add Query" to create one.
-            </p>
-          ) : (
-            <div className="border rounded-md">
-              {savedQueries.map((q, index) => (
-                <div key={q.id} className={`${index < savedQueries.length - 1 ? 'border-b' : ''}`}>
-                  <div className="flex items-center justify-between p-4">
-                    <div className="flex-1 overflow-hidden">
-                      <p className="font-medium">{q.name}</p>
-                      <p className="text-sm text-muted-foreground font-mono truncate">{q.query}</p>
-                    </div>
-                    <div className="flex items-center space-x-2 ml-4">
-                      <Button variant="ghost" size="icon" onClick={() => onVerifyQuery(q.id, q.query)} disabled={isLoading || !!verifyingQueryId} aria-label="Verify Query">
-                        {verifyingQueryId === q.id ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <ShieldCheck className="h-4 w-4 text-blue-500" />
-                        )}
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => onRunRawQuery(q.query)} disabled={isLoading || !!verifyingQueryId} aria-label="Run Query">
-                          <Play className="h-4 w-4 text-green-500" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => onDeleteQuery(q.id)} disabled={isLoading || !!verifyingQueryId} aria-label="Delete Query">
-                          <Trash2 className="h-4 w-4 text-red-500" />
-                      </Button>
-                    </div>
-                  </div>
-                  {verificationResult[q.id] && (
-                    <div className="px-4 pb-4">
-                      <div
-                        className={cn(
-                          'mt-2 p-3 rounded-md border',
-                          verificationResult[q.id]?.isValid
-                            ? 'bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800'
-                            : 'bg-red-50 border-red-200 dark:bg-red-950 dark:border-red-800'
-                        )}
-                      >
-                        <h4
-                          className={cn(
-                            'font-semibold text-sm mb-2',
-                            verificationResult[q.id]?.isValid
-                              ? 'text-green-800 dark:text-green-300'
-                              : 'text-red-800 dark:text-red-300'
-                          )}
-                        >
-                          Verification Result:
-                        </h4>
-                        <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                          {verificationResult[q.id]?.explanation}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
+    <div className="space-y-6">
+        <SchemaUploadCard
+            onFileUpload={onFileUpload}
+            uploadedFileName={uploadedFileName}
+            isLoading={isLoading}
+            description="Optionally upload a schema to enable more accurate verification for your raw queries."
+        />
+        <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+            <CardTitle>Raw SQL Queries</CardTitle>
+            <CardDescription>
+                Manage, run, and verify your saved raw SQL queries directly.
+            </CardDescription>
             </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+            <AddQueryDialog onSave={onAddQuery} />
+        </CardHeader>
+        <CardContent>
+            <div className="space-y-4">
+            {savedQueries.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                No saved queries yet. Click "Add Query" to create one.
+                </p>
+            ) : (
+                <div className="border rounded-md">
+                {savedQueries.map((q, index) => (
+                    <div key={q.id} className={`${index < savedQueries.length - 1 ? 'border-b' : ''}`}>
+                    <div className="flex items-center justify-between p-4">
+                        <div className="flex-1 overflow-hidden">
+                        <p className="font-medium">{q.name}</p>
+                        <p className="text-sm text-muted-foreground font-mono truncate">{q.query}</p>
+                        </div>
+                        <div className="flex items-center space-x-2 ml-4">
+                        <Button variant="ghost" size="icon" onClick={() => onVerifyQuery(q.id, q.query)} disabled={isLoading || !!verifyingQueryId} aria-label="Verify Query">
+                            {verifyingQueryId === q.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                            <ShieldCheck className="h-4 w-4 text-blue-500" />
+                            )}
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => onRunRawQuery(q.query)} disabled={isLoading || !!verifyingQueryId} aria-label="Run Query">
+                            <Play className="h-4 w-4 text-green-500" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => onDeleteQuery(q.id)} disabled={isLoading || !!verifyingQueryId} aria-label="Delete Query">
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                        </div>
+                    </div>
+                    {verificationResult[q.id] && (
+                        <div className="px-4 pb-4">
+                        <div
+                            className={cn(
+                            'mt-2 p-3 rounded-md border',
+                            verificationResult[q.id]?.isValid
+                                ? 'bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800'
+                                : 'bg-red-50 border-red-200 dark:bg-red-950 dark:border-red-800'
+                            )}
+                        >
+                            <h4
+                            className={cn(
+                                'font-semibold text-sm mb-2',
+                                verificationResult[q.id]?.isValid
+                                ? 'text-green-800 dark:text-green-300'
+                                : 'text-red-800 dark:text-red-300'
+                            )}
+                            >
+                            Verification Result:
+                            </h4>
+                            <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                            {verificationResult[q.id]?.explanation}
+                            </p>
+                        </div>
+                        </div>
+                    )}
+                    </div>
+                ))}
+                </div>
+            )}
+            </div>
+        </CardContent>
+        </Card>
+    </div>
   );
 }
 
