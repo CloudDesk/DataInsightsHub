@@ -1,11 +1,12 @@
 'use server';
 
-import { db } from '@/lib/firebase';
+import { getDb } from '@/lib/firebase';
 import { collection, getDocs, addDoc, deleteDoc, doc, query, orderBy, serverTimestamp } from 'firebase/firestore';
 import type { SavedQuery } from '@/lib/types';
 
 export async function getSavedQueries(): Promise<SavedQuery[]> {
   try {
+    const db = getDb();
     const queriesCollectionRef = collection(db, 'saved_queries');
     const q = query(queriesCollectionRef, orderBy('createdAt', 'desc'));
     const querySnapshot = await getDocs(q);
@@ -16,8 +17,11 @@ export async function getSavedQueries(): Promise<SavedQuery[]> {
     }));
   } catch (error) {
     console.error("Error fetching saved queries from Firestore:", error);
-    if (error instanceof Error && (error.message.includes('permission-denied') || error.message.includes('9 FAILED_PRECONDITION') || error.message.includes('Missing or insufficient permissions'))) {
-         throw new Error('Failed to fetch queries. This might be due to missing Firestore security rules or the database not being set up. Please check your Firebase project configuration.');
+    if (error instanceof Error) {
+        if (error.message.includes('permission-denied') || error.message.includes('9 FAILED_PRECONDITION') || error.message.includes('Missing or insufficient permissions')) {
+             throw new Error('Failed to fetch queries. This might be due to missing Firestore security rules or the database not being set up. Please check your Firebase project configuration.');
+        }
+        throw new Error(error.message);
     }
     throw new Error('An unexpected error occurred while fetching saved queries.');
   }
@@ -25,6 +29,7 @@ export async function getSavedQueries(): Promise<SavedQuery[]> {
 
 export async function addSavedQuery(name: string, queryText: string): Promise<SavedQuery> {
     try {
+        const db = getDb();
         const queriesCollectionRef = collection(db, 'saved_queries');
         const docRef = await addDoc(queriesCollectionRef, {
             name: name,
@@ -34,8 +39,11 @@ export async function addSavedQuery(name: string, queryText: string): Promise<Sa
         return { id: docRef.id, name, query: queryText };
     } catch (error) {
         console.error("Failed to save query to Firestore:", error);
-        if (error instanceof Error && (error.message.includes('permission-denied') || error.message.includes('9 FAILED_PRECONDITION') || error.message.includes('Missing or insufficient permissions'))) {
-            throw new Error('Failed to save query. Please check your Firestore security rules or project configuration.');
+        if (error instanceof Error) {
+            if (error.message.includes('permission-denied') || error.message.includes('9 FAILED_PRECONDITION') || error.message.includes('Missing or insufficient permissions')) {
+                throw new Error('Failed to save query. Please check your Firestore security rules or project configuration.');
+            }
+            throw new Error(error.message);
         }
         throw new Error('An unexpected error occurred while saving the query.');
     }
@@ -43,12 +51,16 @@ export async function addSavedQuery(name: string, queryText: string): Promise<Sa
 
 export async function deleteSavedQuery(id: string): Promise<void> {
     try {
+        const db = getDb();
         const queryDoc = doc(db, 'saved_queries', id);
         await deleteDoc(queryDoc);
     } catch(error) {
         console.error("Failed to delete query from Firestore:", error);
-        if (error instanceof Error && (error.message.includes('permission-denied') || error.message.includes('9 FAILED_PRECONDITION') || error.message.includes('Missing or insufficient permissions'))) {
-            throw new Error('Failed to delete query. Please check your Firestore security rules or project configuration.');
+        if (error instanceof Error) {
+            if (error.message.includes('permission-denied') || error.message.includes('9 FAILED_PRECONDITION') || error.message.includes('Missing or insufficient permissions')) {
+                throw new Error('Failed to delete query. Please check your Firestore security rules or project configuration.');
+            }
+            throw new Error(error.message);
         }
         throw new Error('An unexpected error occurred while deleting the query.');
     }

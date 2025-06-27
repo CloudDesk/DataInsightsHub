@@ -1,5 +1,5 @@
-import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
+import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
+import { getFirestore, type Firestore } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -10,14 +10,25 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// This check is important for debugging. It ensures that the app doesn't
-// fail silently if the environment variables are not set.
-if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
-  console.warn('Firebase configuration is missing. Some features may not work. Please check your .env file.');
+let db: Firestore;
+
+function initializeDb() {
+  if (!getApps().length) {
+    if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+      // This error will be caught by the server action's try/catch block
+      throw new Error('Firebase configuration is missing. Please check your .env file and ensure all NEXT_PUBLIC_FIREBASE_ variables are set.');
+    }
+    const app: FirebaseApp = initializeApp(firebaseConfig);
+    db = getFirestore(app);
+  } else {
+    db = getFirestore(getApp());
+  }
 }
 
-
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-const db = getFirestore(app);
-
-export { db };
+// Export a function that returns the db instance, initializing it if necessary.
+export function getDb() {
+  if (!db) {
+    initializeDb();
+  }
+  return db;
+}
