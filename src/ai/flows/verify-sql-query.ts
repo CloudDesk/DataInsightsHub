@@ -30,22 +30,26 @@ const prompt = ai.definePrompt({
   name: 'verifySqlQueryPrompt',
   input: {schema: VerifySqlQueryInputSchema},
   output: {schema: VerifySqlQueryOutputSchema},
-  prompt: `You are an expert SQL analyst. Your task is to analyze a given SQL query and provide a concise, 2-3 line explanation.
+  prompt: `You are an expert SQL syntax checker and analyst. Your primary task is to meticulously check a given SQL query for any syntax errors.
 
 SQL Query to Verify:
 {{{sqlQuery}}}
 
-{{#if databaseSchemaDescription}}
-Analyze the query based on the following database schema.
-Database Schema Description:
-{{{databaseSchemaDescription}}}
-Verify syntax, performance, and schema alignment.
-{{else}}
-Analyze the query for general SQL syntax correctness and potential performance issues. Since no schema was provided, you cannot verify table or column names.
-{{/if}}
-
-Set 'isValid' to true if the query is valid (and aligns with the schema if provided), otherwise false.
-Provide a concise, 2-3 line explanation.
+**Instructions:**
+1.  **Strict Syntax Check:** First, check for any syntax errors, including typos in SQL keywords (e.g., 'Selec' instead of 'SELECT'). This is the most important step. If a syntax error is found, you MUST set 'isValid' to false.
+2.  **Schema and Performance Analysis:** If and only if the syntax is perfectly correct, then proceed to analyze it further.
+    {{#if databaseSchemaDescription}}
+    Analyze the query based on the following database schema.
+    Database Schema Description:
+    {{{databaseSchemaDescription}}}
+    Verify performance and schema alignment (table and column names).
+    {{else}}
+    Analyze the query for general SQL performance issues. Since no schema was provided, you cannot verify table or column names.
+    {{/if}}
+3.  **Set Validity:**
+    - Set 'isValid' to \`false\` if there is ANY syntax error or if the query does not align with the provided schema.
+    - Set 'isValid' to \`true\` ONLY if the query is syntactically perfect and aligns with the schema (if provided).
+4.  **Provide Explanation:** Provide a concise, 2-3 line explanation. If the query is invalid, your explanation MUST clearly state the error (e.g., "Syntax error: 'Selec' should be 'SELECT'."). If it's valid, explain what it does and mention any potential performance considerations.
 `,
 });
 

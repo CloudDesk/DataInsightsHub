@@ -241,7 +241,7 @@ function RawQueryView({ savedQueries, onAddQuery, onDeleteQuery, onRunRawQuery, 
                           'mt-2 p-3 rounded-md border',
                           verificationResult[q.id]?.isValid
                             ? 'bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800'
-                            : 'bg-accent/20 border-accent/50'
+                            : 'bg-red-50 border-red-200 dark:bg-red-950 dark:border-red-800'
                         )}
                       >
                         <h4
@@ -249,7 +249,7 @@ function RawQueryView({ savedQueries, onAddQuery, onDeleteQuery, onRunRawQuery, 
                             'font-semibold text-sm mb-2',
                             verificationResult[q.id]?.isValid
                               ? 'text-green-800 dark:text-green-300'
-                              : 'text-foreground'
+                              : 'text-red-800 dark:text-red-300'
                           )}
                         >
                           Verification Result:
