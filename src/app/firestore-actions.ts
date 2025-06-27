@@ -50,7 +50,7 @@ export async function getSavedQueries(): Promise<SavedQuery[]> {
     console.error("Error fetching saved queries from Firestore:", error);
     if (error instanceof Error) {
         if (error.message.includes('permission-denied') || error.message.includes('9 FAILED_PRECONDITION') || error.message.includes('Missing or insufficient permissions')) {
-             throw new Error('Failed to fetch queries. This might be due to missing Firestore security rules or the database not being set up. Please check your Firebase project configuration.');
+             throw new Error('Firestore database not found or not accessible. Please go to your Firebase project console, create a Firestore database, and start it in "test mode" to allow read/write access.');
         }
         throw new Error(error.message);
     }
@@ -71,7 +71,7 @@ export async function addSavedQuery(name: string, queryText: string): Promise<vo
         console.error("Failed to save query to Firestore:", error);
         if (error instanceof Error) {
             if (error.message.includes('permission-denied') || error.message.includes('9 FAILED_PRECONDITION') || error.message.includes('Missing or insufficient permissions')) {
-                throw new Error('Failed to save query. Please check your Firestore security rules or project configuration.');
+                throw new Error('Firestore database not found or not accessible. Please go to your Firebase project console, create a Firestore database, and start it in "test mode" to allow read/write access.');
             }
             throw new Error(error.message);
         }
@@ -88,7 +88,7 @@ export async function deleteSavedQuery(id: string): Promise<void> {
         console.error("Failed to delete query from Firestore:", error);
         if (error instanceof Error) {
             if (error.message.includes('permission-denied') || error.message.includes('9 FAILED_PRECONDITION') || error.message.includes('Missing or insufficient permissions')) {
-                throw new Error('Failed to delete query. Please check your Firestore security rules or project configuration.');
+                throw new Error('Firestore database not found or not accessible. Please go to your Firebase project console, create a Firestore database, and start it in "test mode" to allow read/write access.');
             }
             throw new Error(error.message);
         }
