@@ -7,18 +7,13 @@ import * as XLSX from 'xlsx';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { generateSqlQuery } from '@/ai/flows/generate-sql-query';
 import { verifySqlQuery, type VerifySqlQueryOutput } from '@/ai/flows/verify-sql-query';
-import type { QueryResult } from '@/lib/types';
+import type { QueryResult, SavedQuery } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { QueryTab } from '@/components/query-tab';
 import { ReportTab } from '@/components/report-tab';
 import { DashboardTab } from '@/components/dashboard-tab';
 import { runQuery } from './actions';
-
-export type SavedQuery = {
-  id: string;
-  name: string;
-  query: string;
-};
+import { addSavedQuery, deleteSavedQuery, getSavedQueries } from './firestore-actions';
 
 export default function Home() {
   const [schema, setSchema] = React.useState<string>('');
@@ -36,29 +31,24 @@ export default function Home() {
   const { toast } = useToast();
 
   React.useEffect(() => {
-    try {
-      const item = window.localStorage.getItem('savedQueries');
-      if (item) {
-        const queries = JSON.parse(item);
-        if (Array.isArray(queries)) {
+    const fetchQueries = async () => {
+        try {
+            const queries = await getSavedQueries();
             setSavedQueries(queries);
+        } catch (error) {
+            console.error(error);
+            const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred.';
+            toast({
+                variant: 'destructive',
+                title: 'Error Loading Saved Queries',
+                description: errorMessage,
+            });
         }
-      }
-    } catch (error) {
-      console.error("Failed to load queries from localStorage", error);
-      setSavedQueries([]);
-    }
-  }, []);
+    };
+    fetchQueries();
+  }, [toast]);
 
-  React.useEffect(() => {
-    try {
-      window.localStorage.setItem('savedQueries', JSON.stringify(savedQueries));
-    } catch (error) {
-      console.error("Failed to save queries to localStorage", error);
-    }
-  }, [savedQueries]);
-
-  const handleAddSavedQuery = (name: string, query: string) => {
+  const handleAddSavedQuery = async (name: string, query: string) => {
     if (!name.trim() || !query.trim()) {
       toast({
         variant: 'destructive',
@@ -67,25 +57,46 @@ export default function Home() {
       });
       return;
     }
-    const newQuery: SavedQuery = { id: Date.now().toString(), name, query };
-    setSavedQueries(prev => [...prev, newQuery]);
-    toast({
-      title: 'Success',
-      description: 'Query saved successfully.'
-    });
+    try {
+        const newQuery = await addSavedQuery(name, query);
+        setSavedQueries(prev => [newQuery, ...prev]);
+        toast({
+            title: 'Success',
+            description: 'Query saved successfully to Firestore.'
+        });
+    } catch (error) {
+        console.error("Failed to save query to Firestore", error);
+        const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred.';
+        toast({
+            variant: 'destructive',
+            title: 'Error Saving Query',
+            description: errorMessage,
+        });
+    }
   };
 
-  const handleDeleteSavedQuery = (id: string) => {
-    setSavedQueries(prev => prev.filter(q => q.id !== id));
-    setVerificationResult(prev => {
-      const newResults = { ...prev };
-      delete newResults[id];
-      return newResults;
-    });
-    toast({
-        title: 'Query Deleted',
-        description: 'The saved query has been removed.',
-    });
+  const handleDeleteSavedQuery = async (id: string) => {
+    try {
+        await deleteSavedQuery(id);
+        setSavedQueries(prev => prev.filter(q => q.id !== id));
+        setVerificationResult(prev => {
+          const newResults = { ...prev };
+          delete newResults[id];
+          return newResults;
+        });
+        toast({
+            title: 'Query Deleted',
+            description: 'The saved query has been removed from Firestore.',
+        });
+    } catch (error) {
+        console.error("Failed to delete query from Firestore", error);
+        const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred.';
+        toast({
+            variant: 'destructive',
+            title: 'Error Deleting Query',
+            description: errorMessage,
+        });
+    }
   };
 
   const handleRunRawQuery = async (query: string) => {
