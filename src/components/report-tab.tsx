@@ -2,6 +2,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { QueryResult } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
+import { Button } from './ui/button';
+import { FileDown } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 interface ReportTabProps {
   queryResult: QueryResult | null;
@@ -9,6 +12,24 @@ interface ReportTabProps {
 }
 
 export function ReportTab({ queryResult, isLoading }: ReportTabProps) {
+  const handleExport = () => {
+    if (!queryResult || queryResult.length === 0) return;
+
+    const dataToExport = queryResult.map(row => {
+      const newRow: { [key: string]: any } = {};
+      for (const key in row) {
+        const newKey = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        newRow[newKey] = row[key];
+      }
+      return newRow;
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'ReportData');
+    XLSX.writeFile(workbook, 'report.xlsx');
+  };
+
   if (isLoading) {
     return (
       <Card>
@@ -41,11 +62,17 @@ export function ReportTab({ queryResult, isLoading }: ReportTabProps) {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Query Results</CardTitle>
-        <CardDescription>
-          Here is the raw data returned from your query.
-        </CardDescription>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle>Query Results</CardTitle>
+          <CardDescription>
+            Here is the raw data returned from your query.
+          </CardDescription>
+        </div>
+        <Button onClick={handleExport} variant="outline" size="sm">
+          <FileDown className="mr-2" />
+          Export to Excel
+        </Button>
       </CardHeader>
       <CardContent>
         <div className="border rounded-md">
