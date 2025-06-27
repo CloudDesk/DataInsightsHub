@@ -7,6 +7,7 @@ import * as XLSX from 'xlsx';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { generateSqlQuery } from '@/ai/flows/generate-sql-query';
 import { verifySqlQuery, type VerifySqlQueryOutput } from '@/ai/flows/verify-sql-query';
+import { generateDashboardQuery } from '@/ai/flows/generate-dashboard-query';
 import type { QueryResult, SavedQuery } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { QueryTab } from '@/components/query-tab';
@@ -109,6 +110,15 @@ export default function Home() {
       });
       return;
     }
+    if (!schema.trim()) {
+      toast({
+        variant: 'destructive',
+        title: 'Schema Missing',
+        description: 'Please upload a schema to generate a dashboard for your raw query.',
+      });
+      return;
+    }
+
     setIsLoading(true);
     setReportResult(null);
     setDashboardResult(null);
@@ -116,22 +126,31 @@ export default function Home() {
     setDashboardQuery('');
 
     try {
-      const result = await runQuery(query);
-      setReportResult(result);
-      setDashboardResult(result);
+      const dashboardGenResult = await generateDashboardQuery({ schema, reportQuery: query });
+      const newDashboardQuery = dashboardGenResult.dashboardQuery;
+      
+      setDashboardQuery(newDashboardQuery);
+
+      const [reportDbResult, dashboardDbResult] = await Promise.all([
+        runQuery(query),
+        runQuery(newDashboardQuery),
+      ]);
+
+      setReportResult(reportDbResult);
+      setDashboardResult(dashboardDbResult);
       setActiveTab('report');
     } catch (e) {
       console.error(e);
       const errorMessage = e instanceof Error ? e.message : 'An unexpected error occurred.';
       toast({
         variant: 'destructive',
-        title: 'Error Running Query',
-        description: errorMessage,
+        title: 'Error Processing Query',
+        description: `Failed to generate dashboard or run queries. ${errorMessage}`,
       });
     } finally {
       setIsLoading(false);
     }
-  }
+  };
 
   const handleVerifyQuery = async (queryId: string, query: string) => {
     setVerifyingQueryId(queryId);
