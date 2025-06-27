@@ -117,7 +117,7 @@ export default function Home() {
     try {
       const result = await runQuery(query);
       setReportResult(result);
-      setDashboardResult(result); // Use the same result for the dashboard
+      setDashboardResult(result);
       setActiveTab('report');
     } catch (e) {
       console.error(e);
