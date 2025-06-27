@@ -4,10 +4,9 @@ import { db } from '@/lib/firebase';
 import { collection, getDocs, addDoc, deleteDoc, doc, query, orderBy, serverTimestamp } from 'firebase/firestore';
 import type { SavedQuery } from '@/lib/types';
 
-const queriesCollectionRef = collection(db, 'saved_queries');
-
 export async function getSavedQueries(): Promise<SavedQuery[]> {
   try {
+    const queriesCollectionRef = collection(db, 'saved_queries');
     const q = query(queriesCollectionRef, orderBy('createdAt', 'desc'));
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({
@@ -26,6 +25,7 @@ export async function getSavedQueries(): Promise<SavedQuery[]> {
 
 export async function addSavedQuery(name: string, queryText: string): Promise<SavedQuery> {
     try {
+        const queriesCollectionRef = collection(db, 'saved_queries');
         const docRef = await addDoc(queriesCollectionRef, {
             name: name,
             query: queryText,
