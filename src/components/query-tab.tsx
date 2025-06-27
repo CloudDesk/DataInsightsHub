@@ -1,9 +1,22 @@
-import { Loader2, Wand2 } from 'lucide-react';
+import * as React from 'react';
+import { Loader2, Wand2, Plus, Trash2, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogTrigger,
+  DialogClose
+} from '@/components/ui/dialog';
+import type { SavedQuery } from '@/app/page';
 
 interface QueryTabProps {
   onFileUpload: (file: File) => void;
@@ -14,18 +27,65 @@ interface QueryTabProps {
   dashboardQuery: string;
   isLoading: boolean;
   onSubmit: () => void;
+  savedQueries: SavedQuery[];
+  onAddQuery: (name: string, query: string) => void;
+  onDeleteQuery: (id: string) => void;
+  onRunRawQuery: (query: string) => void;
 }
 
-export function QueryTab({
+function AddQueryDialog({ onSave }: { onSave: (name: string, query: string) => void }) {
+  const [name, setName] = React.useState('');
+  const [query, setQuery] = React.useState('');
+  const [open, setOpen] = React.useState(false);
+
+  const handleSaveClick = () => {
+    onSave(name, query);
+    setName('');
+    setQuery('');
+    setOpen(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm"><Plus className="mr-2" /> Add Query</Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[625px]">
+        <DialogHeader>
+          <DialogTitle>Add New Raw Query</DialogTitle>
+          <DialogDescription>
+            Save a raw SQL query for later use. This query will not be processed by the AI.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="name" className="text-right">Name</Label>
+            <Input id="name" value={name} onChange={(e) => setName(e.target.value)} className="col-span-3" placeholder="e.g., 'Active Users Last 30 Days'" />
+          </div>
+          <div className="grid grid-cols-4 items-start gap-4">
+            <Label htmlFor="query" className="text-right pt-2">Query</Label>
+            <Textarea id="query" value={query} onChange={(e) => setQuery(e.target.value)} className="col-span-3 min-h-[150px]" placeholder="SELECT * FROM users WHERE..." />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button type="submit" onClick={handleSaveClick}>Save Query</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function GenerateQueryView({
   onFileUpload,
   uploadedFileName,
   prompt,
   setPrompt,
-  reportQuery,
-  dashboardQuery,
   isLoading,
   onSubmit,
-}: QueryTabProps) {
+  reportQuery,
+  dashboardQuery
+}: Omit<QueryTabProps, 'savedQueries' | 'onAddQuery' | 'onDeleteQuery' | 'onRunRawQuery'>) {
   return (
     <div className="space-y-6">
       <Card>
@@ -124,5 +184,66 @@ export function QueryTab({
         </Card>
       )}
     </div>
+  );
+}
+
+function RawQueryView({ savedQueries, onAddQuery, onDeleteQuery, onRunRawQuery, isLoading }: Pick<QueryTabProps, 'savedQueries' | 'onAddQuery' | 'onDeleteQuery' | 'onRunRawQuery' | 'isLoading'>) {
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle>Raw SQL Queries</CardTitle>
+          <CardDescription>
+            Manage and run your saved raw SQL queries directly.
+          </CardDescription>
+        </div>
+        <AddQueryDialog onSave={onAddQuery} />
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {savedQueries.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-8">
+              No saved queries yet. Click "Add Query" to create one.
+            </p>
+          ) : (
+            <div className="border rounded-md">
+              {savedQueries.map((q, index) => (
+                <div key={q.id} className={`flex items-center justify-between p-4 ${index < savedQueries.length - 1 ? 'border-b' : ''}`}>
+                  <div className="flex-1">
+                    <p className="font-medium">{q.name}</p>
+                    <p className="text-sm text-muted-foreground font-mono truncate">{q.query}</p>
+                  </div>
+                  <div className="flex items-center space-x-2 ml-4">
+                     <Button variant="ghost" size="icon" onClick={() => onRunRawQuery(q.query)} disabled={isLoading} aria-label="Run Query">
+                        <Play className="h-4 w-4 text-green-500" />
+                     </Button>
+                     <Button variant="ghost" size="icon" onClick={() => onDeleteQuery(q.id)} disabled={isLoading} aria-label="Delete Query">
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                     </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+export function QueryTab(props: QueryTabProps) {
+  return (
+    <Tabs defaultValue="generate" className="w-full">
+      <TabsList className="grid w-full grid-cols-2 md:w-fit md:mx-auto">
+        <TabsTrigger value="generate">Generate Query</TabsTrigger>
+        <TabsTrigger value="raw">Raw Query</TabsTrigger>
+      </TabsList>
+      <TabsContent value="generate" className="mt-6">
+        <GenerateQueryView {...props} />
+      </TabsContent>
+      <TabsContent value="raw" className="mt-6">
+        <RawQueryView {...props} />
+      </TabsContent>
+    </Tabs>
   );
 }

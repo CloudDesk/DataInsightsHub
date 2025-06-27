@@ -13,6 +13,12 @@ import { ReportTab } from '@/components/report-tab';
 import { DashboardTab } from '@/components/dashboard-tab';
 import { runQuery } from './actions';
 
+export type SavedQuery = {
+  id: string;
+  name: string;
+  query: string;
+};
+
 export default function Home() {
   const [schema, setSchema] = React.useState<string>('');
   const [uploadedFileName, setUploadedFileName] = React.useState<string | null>(null);
@@ -23,7 +29,89 @@ export default function Home() {
   const [dashboardResult, setDashboardResult] = React.useState<QueryResult | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState('query');
+  const [savedQueries, setSavedQueries] = React.useState<SavedQuery[]>([]);
   const { toast } = useToast();
+
+  React.useEffect(() => {
+    try {
+      const item = window.localStorage.getItem('savedQueries');
+      if (item) {
+        const queries = JSON.parse(item);
+        if (Array.isArray(queries)) {
+            setSavedQueries(queries);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load queries from localStorage", error);
+      setSavedQueries([]);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    try {
+      window.localStorage.setItem('savedQueries', JSON.stringify(savedQueries));
+    } catch (error) {
+      console.error("Failed to save queries to localStorage", error);
+    }
+  }, [savedQueries]);
+
+  const handleAddSavedQuery = (name: string, query: string) => {
+    if (!name.trim() || !query.trim()) {
+      toast({
+        variant: 'destructive',
+        title: 'Input Missing',
+        description: 'Both a name and a query are required to save.',
+      });
+      return;
+    }
+    const newQuery: SavedQuery = { id: Date.now().toString(), name, query };
+    setSavedQueries(prev => [...prev, newQuery]);
+    toast({
+      title: 'Success',
+      description: 'Query saved successfully.'
+    });
+  };
+
+  const handleDeleteSavedQuery = (id: string) => {
+    setSavedQueries(prev => prev.filter(q => q.id !== id));
+    toast({
+        title: 'Query Deleted',
+        description: 'The saved query has been removed.',
+    });
+  };
+
+  const handleRunRawQuery = async (query: string) => {
+    if (!query.trim()) {
+      toast({
+        variant: 'destructive',
+        title: 'Empty Query',
+        description: 'Cannot run an empty query.',
+      });
+      return;
+    }
+    setIsLoading(true);
+    setReportResult(null);
+    setDashboardResult(null);
+    setReportQuery(query);
+    setDashboardQuery('');
+
+    try {
+      const result = await runQuery(query);
+      setReportResult(result);
+      setActiveTab('report');
+    } catch (e) {
+      console.error(e);
+      const errorMessage = e instanceof Error ? e.message : 'An unexpected error occurred.';
+      toast({
+        variant: 'destructive',
+        title: 'Error Running Query',
+        description: errorMessage,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
 
   const handleFileUpload = (file: File) => {
     setIsLoading(true);
@@ -192,6 +280,10 @@ export default function Home() {
               dashboardQuery={dashboardQuery}
               isLoading={isLoading}
               onSubmit={handleGenerateQuery}
+              savedQueries={savedQueries}
+              onAddQuery={handleAddSavedQuery}
+              onDeleteQuery={handleDeleteSavedQuery}
+              onRunRawQuery={handleRunRawQuery}
             />
           </TabsContent>
           <TabsContent value="report" className="mt-6">
