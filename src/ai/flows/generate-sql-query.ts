@@ -45,6 +45,7 @@ const generateSqlQueryPrompt = ai.definePrompt({
 **Rules:**
 *   You MUST use the exact table and column names as provided in the schema. Do not change them (e.g., from plural to singular).
 *   You MUST ONLY use columns explicitly listed in the schema. Do not assume the existence of any other columns (e.g., primary keys like 'id', 'user_id', 'driver_id') if they are not defined in the provided schema.
+*   When comparing against a date or timestamp column, cast string literals to the correct type (e.g., \`'2024-05-12'::DATE\`). For a prompt like "in May 2024", the condition should be \`date_column >= '2024-05-01' AND date_column < '2024-06-01'\`.
 *   Use the same user prompt for both queries.
 *   Don't simply count rows unless the prompt explicitly asks for a count. Focus on total, sum, count, or category-based aggregation for the dashboard output.
 
@@ -61,6 +62,10 @@ const generateSqlQueryPrompt = ai.definePrompt({
 *   **Prompt:** "Display drivers total wallet amount whose status is active."
     *   **Report Query Goal:** Show a single row or grouped result with status = 'active' and the total wallet amount.
     *   **Dashboard Query Goal:** A query that returns two rows: one with the total wallet amount for active drivers and one for the total wallet amount for others (e.g., inactive).
+
+*   **Prompt:** "Show all drivers created last month."
+    *   **Report Query Goal:** Show all driver records from the previous calendar month.
+    *   **Dashboard Query Goal:** A query that returns two rows: one with a count of drivers created last month, and one for 'Others'.
 
 Always keep the report focused and accurate, and make the dashboard visually meaningful through comparison.
 
