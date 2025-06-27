@@ -6,7 +6,7 @@ import * as XLSX from 'xlsx';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { generateSqlQuery } from '@/ai/flows/generate-sql-query';
-import { verifySqlQuery } from '@/ai/flows/verify-sql-query';
+import { verifySqlQuery, type VerifySqlQueryOutput } from '@/ai/flows/verify-sql-query';
 import type { QueryResult } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { QueryTab } from '@/components/query-tab';
@@ -31,7 +31,7 @@ export default function Home() {
   const [isLoading, setIsLoading] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState('query');
   const [savedQueries, setSavedQueries] = React.useState<SavedQuery[]>([]);
-  const [verificationResult, setVerificationResult] = React.useState<Record<string, string | null>>({});
+  const [verificationResult, setVerificationResult] = React.useState<Record<string, VerifySqlQueryOutput | null>>({});
   const [verifyingQueryId, setVerifyingQueryId] = React.useState<string | null>(null);
   const { toast } = useToast();
 
@@ -128,7 +128,7 @@ export default function Home() {
         sqlQuery: query,
         databaseSchemaDescription: schema,
       });
-      setVerificationResult(prev => ({ ...prev, [queryId]: result.explanation }));
+      setVerificationResult(prev => ({ ...prev, [queryId]: result }));
     } catch (e) {
       console.error(e);
       const errorMessage = e instanceof Error ? e.message : 'An unexpected error occurred.';
@@ -137,7 +137,7 @@ export default function Home() {
         title: 'Error Verifying Query',
         description: errorMessage,
       });
-      setVerificationResult(prev => ({ ...prev, [queryId]: `Error: ${errorMessage}` }));
+      setVerificationResult(prev => ({ ...prev, [queryId]: { isValid: false, explanation: `Error: ${errorMessage}` }}));
     } finally {
       setVerifyingQueryId(null);
     }

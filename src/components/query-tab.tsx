@@ -16,6 +16,8 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import type { SavedQuery } from '@/app/page';
+import type { VerifySqlQueryOutput } from '@/ai/flows/verify-sql-query';
+import { cn } from '@/lib/utils';
 
 interface QueryTabProps {
   onFileUpload: (file: File) => void;
@@ -31,7 +33,7 @@ interface QueryTabProps {
   onDeleteQuery: (id: string) => void;
   onRunRawQuery: (query: string) => void;
   onVerifyQuery: (queryId: string, query: string) => void;
-  verificationResult: Record<string, string | null>;
+  verificationResult: Record<string, VerifySqlQueryOutput | null>;
   verifyingQueryId: string | null;
 }
 
@@ -234,9 +236,27 @@ function RawQueryView({ savedQueries, onAddQuery, onDeleteQuery, onRunRawQuery, 
                   </div>
                   {verificationResult[q.id] && (
                     <div className="px-4 pb-4">
-                      <div className="mt-2 p-3 rounded-md bg-accent/20 border border-accent/50">
-                        <h4 className="font-semibold text-sm mb-2 text-foreground">Verification Result:</h4>
-                        <p className="text-sm text-muted-foreground whitespace-pre-wrap">{verificationResult[q.id]}</p>
+                      <div
+                        className={cn(
+                          'mt-2 p-3 rounded-md border',
+                          verificationResult[q.id]?.isValid
+                            ? 'bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800'
+                            : 'bg-accent/20 border-accent/50'
+                        )}
+                      >
+                        <h4
+                          className={cn(
+                            'font-semibold text-sm mb-2',
+                            verificationResult[q.id]?.isValid
+                              ? 'text-green-800 dark:text-green-300'
+                              : 'text-foreground'
+                          )}
+                        >
+                          Verification Result:
+                        </h4>
+                        <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                          {verificationResult[q.id]?.explanation}
+                        </p>
                       </div>
                     </div>
                   )}

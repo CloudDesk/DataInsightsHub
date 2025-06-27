@@ -17,7 +17,8 @@ const VerifySqlQueryInputSchema = z.object({
 export type VerifySqlQueryInput = z.infer<typeof VerifySqlQueryInputSchema>;
 
 const VerifySqlQueryOutputSchema = z.object({
-  explanation: z.string().describe('A detailed explanation of the SQL query, including what it does and any potential issues.'),
+  isValid: z.boolean().describe('Whether the query is syntactically correct and aligns with the schema if provided.'),
+  explanation: z.string().describe('A concise, 2-3 line explanation of the SQL query, including what it does and any potential issues.'),
 });
 export type VerifySqlQueryOutput = z.infer<typeof VerifySqlQueryOutputSchema>;
 
@@ -29,21 +30,22 @@ const prompt = ai.definePrompt({
   name: 'verifySqlQueryPrompt',
   input: {schema: VerifySqlQueryInputSchema},
   output: {schema: VerifySqlQueryOutputSchema},
-  prompt: `You are an expert SQL analyst. Your task is to analyze a given SQL query.
+  prompt: `You are an expert SQL analyst. Your task is to analyze a given SQL query and provide a concise, 2-3 line explanation.
 
 SQL Query to Verify:
 {{{sqlQuery}}}
 
 {{#if databaseSchemaDescription}}
 Analyze the query based on the following database schema.
-
 Database Schema Description:
 {{{databaseSchemaDescription}}}
-
-Please provide a concise explanation of what the query does. Point out any potential syntax errors, performance issues, or parts of the query that do not align with the provided schema. If the query is valid and well-formed according to the schema, confirm its correctness.
+Verify syntax, performance, and schema alignment.
 {{else}}
-Please provide a concise explanation of what the query does. Analyze it for general SQL syntax correctness and potential performance issues. Since no schema was provided, you cannot verify table or column names.
+Analyze the query for general SQL syntax correctness and potential performance issues. Since no schema was provided, you cannot verify table or column names.
 {{/if}}
+
+Set 'isValid' to true if the query is valid (and aligns with the schema if provided), otherwise false.
+Provide a concise, 2-3 line explanation.
 `,
 });
 
