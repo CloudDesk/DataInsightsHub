@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Loader2, Database, MessageSquare, LineChart, Table } from 'lucide-react';
+import { Loader2, MessageSquare, LineChart, Table } from 'lucide-react';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { generateSqlQuery } from '@/ai/flows/generate-sql-query';
@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { QueryTab } from '@/components/query-tab';
 import { ReportTab } from '@/components/report-tab';
 import { DashboardTab } from '@/components/dashboard-tab';
+import { runQuery } from './actions';
 
 const exampleSchema = `CREATE TABLE sales (
   sale_id INT PRIMARY KEY,
@@ -52,24 +53,27 @@ export default function Home() {
 
     try {
       const result = await generateSqlQuery({ schema, prompt });
-      setSqlQuery(result.sqlQuery);
+      const generatedSql = result.sqlQuery;
+      setSqlQuery(generatedSql);
 
-      // This is mock data for demonstration purposes.
-      // In a real application, you would execute the generated SQL against your database.
-      const mockData: QueryResult = [
-        { category: 'Electronics', total_sales: 125500.75 },
-        { category: 'Clothing', total_sales: 78200.50 },
-        { category: 'Home Goods', total_sales: 93400.20 },
-        { category: 'Books', total_sales: 32100.00 },
-      ];
-      setQueryResult(mockData);
-      setActiveTab('report');
+      if (generatedSql) {
+        const dbResult = await runQuery(generatedSql);
+        setQueryResult(dbResult);
+        setActiveTab('report');
+      } else {
+         toast({
+          variant: 'destructive',
+          title: 'SQL Generation Failed',
+          description: 'The AI could not generate a SQL query from your prompt.',
+        });
+      }
     } catch (e) {
       console.error(e);
+      const errorMessage = e instanceof Error ? e.message : 'An unexpected error occurred.';
       toast({
         variant: 'destructive',
-        title: 'Error generating SQL',
-        description: 'An unexpected error occurred. Please check the console for details.',
+        title: 'Error',
+        description: errorMessage,
       });
     } finally {
       setIsLoading(false);
