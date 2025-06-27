@@ -44,6 +44,7 @@ const generateSqlQueryPrompt = ai.definePrompt({
 
 **Rules:**
 *   You MUST use the exact table and column names as provided in the schema. Do not change them (e.g., from plural to singular).
+*   You MUST ONLY use columns explicitly listed in the schema. Do not assume the existence of any other columns (e.g., primary keys like 'id', 'user_id', 'driver_id') if they are not defined in the provided schema.
 *   Use the same user prompt for both queries.
 *   Don't simply count rows unless the prompt explicitly asks for a count. Focus on total, sum, count, or category-based aggregation for the dashboard output.
 
