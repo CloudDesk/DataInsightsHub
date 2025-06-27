@@ -3,10 +3,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 
 interface QueryTabProps {
-  schema: string;
-  setSchema: (schema: string) => void;
+  onFileUpload: (file: File) => void;
+  uploadedFileName: string | null;
   prompt: string;
   setPrompt: (prompt: string) => void;
   reportQuery: string;
@@ -16,8 +17,8 @@ interface QueryTabProps {
 }
 
 export function QueryTab({
-  schema,
-  setSchema,
+  onFileUpload,
+  uploadedFileName,
   prompt,
   setPrompt,
   reportQuery,
@@ -29,22 +30,31 @@ export function QueryTab({
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>1. Provide Schema</CardTitle>
+          <CardTitle>1. Upload Schema</CardTitle>
           <CardDescription>
-            Provide your database schema description below. The more detailed the schema, the more accurate the generated query will be.
+            Upload an Excel file with your database schema. Each sheet should represent a table, with 'Field Name' and 'Description' columns.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
-            <Label htmlFor="schema-input">Database Schema (DDL)</Label>
-            <Textarea
-              id="schema-input"
-              placeholder="e.g., CREATE TABLE users (id INT, name VARCHAR(255), ...);"
-              className="min-h-[150px] font-mono text-sm"
-              value={schema}
-              onChange={(e) => setSchema(e.target.value)}
+            <Label htmlFor="schema-upload">Schema File (.xlsx, .xls)</Label>
+            <Input
+              id="schema-upload"
+              type="file"
+              accept=".xlsx, .xls"
+              onChange={(e) => {
+                if (e.target.files && e.target.files[0]) {
+                  onFileUpload(e.target.files[0]);
+                }
+              }}
               disabled={isLoading}
+              className="cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
             />
+            {uploadedFileName && (
+              <p className="text-sm text-muted-foreground mt-2">
+                Uploaded: <span className="font-medium">{uploadedFileName}</span>
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -72,7 +82,7 @@ export function QueryTab({
       </Card>
 
       <div className="flex justify-center">
-        <Button onClick={onSubmit} disabled={isLoading} size="lg">
+        <Button onClick={onSubmit} disabled={isLoading || !uploadedFileName} size="lg">
           {isLoading ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : (

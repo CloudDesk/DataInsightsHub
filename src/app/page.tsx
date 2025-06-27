@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { Loader2, MessageSquare, LineChart, Table } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { generateSqlQuery } from '@/ai/flows/generate-sql-query';
@@ -12,24 +13,9 @@ import { ReportTab } from '@/components/report-tab';
 import { DashboardTab } from '@/components/dashboard-tab';
 import { runQuery } from './actions';
 
-const exampleSchema = `CREATE TABLE sales (
-  sale_id INT PRIMARY KEY,
-  product_name VARCHAR(100),
-  category VARCHAR(50),
-  unit_price DECIMAL(10, 2),
-  quantity_sold INT,
-  sale_date DATE
-);
-
-CREATE TABLE products (
-  product_id INT PRIMARY KEY,
-  product_name VARCHAR(100),
-  description TEXT,
-  supplier_id INT
-);`;
-
 export default function Home() {
-  const [schema, setSchema] = React.useState<string>(exampleSchema);
+  const [schema, setSchema] = React.useState<string>('');
+  const [uploadedFileName, setUploadedFileName] = React.useState<string | null>(null);
   const [prompt, setPrompt] = React.useState<string>('Show me total sales per category for the last quarter.');
   const [reportQuery, setReportQuery] = React.useState<string>('');
   const [dashboardQuery, setDashboardQuery] = React.useState<string>('');
@@ -39,12 +25,92 @@ export default function Home() {
   const [activeTab, setActiveTab] = React.useState('query');
   const { toast } = useToast();
 
+  const handleFileUpload = (file: File) => {
+    setIsLoading(true);
+    setUploadedFileName(file.name);
+    setSchema('');
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      try {
+        const data = e.target?.result;
+        if (!data) {
+          throw new Error('Failed to read file data.');
+        }
+        const workbook = XLSX.read(data, { type: 'binary' });
+        let schemaDescription = '';
+
+        workbook.SheetNames.forEach(sheetName => {
+          const cleanSheetName = sheetName.trim();
+          if (cleanSheetName) {
+            schemaDescription += `Table: ${cleanSheetName}\n`;
+            const worksheet = workbook.Sheets[sheetName];
+            const json: any[] = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+
+            if (json.length > 0) {
+              const columns = json
+                .map(row => {
+                  const fieldName = row['Field Name'] || row['fieldName'] || row['field_name'];
+                  const description = row['Description'] || row['description'];
+                  if (fieldName && typeof fieldName === 'string' && fieldName.trim()) {
+                    return `- ${fieldName.trim()}: ${String(description || 'No description').trim()}`;
+                  }
+                  return null;
+                })
+                .filter(Boolean);
+              
+              if (columns.length > 0) {
+                schemaDescription += 'Columns:\n' + columns.join('\n') + '\n';
+              }
+            }
+            schemaDescription += '\n';
+          }
+        });
+        
+        const finalSchema = schemaDescription.trim();
+        if (!finalSchema) {
+           throw new Error('No valid schema data found in the Excel file. Please check sheet names and column headers (e.g., "Field Name", "Description").');
+        }
+        setSchema(finalSchema);
+        toast({
+          title: 'Success',
+          description: 'Schema parsed successfully from the Excel file.'
+        })
+      } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+          console.error("Error parsing Excel file:", error);
+          toast({
+              variant: 'destructive',
+              title: 'File Parse Error',
+              description: errorMessage,
+          });
+          setUploadedFileName(null);
+          setSchema('');
+      } finally {
+          setIsLoading(false);
+      }
+    };
+
+    reader.onerror = () => {
+        toast({
+              variant: 'destructive',
+              title: 'File Read Error',
+              description: 'There was an error reading the file.',
+        });
+        setUploadedFileName(null);
+        setSchema('');
+        setIsLoading(false);
+    }
+
+    reader.readAsBinaryString(file);
+  };
+
   const handleGenerateQuery = async () => {
     if (!prompt.trim() || !schema.trim()) {
       toast({
         variant: 'destructive',
         title: 'Input missing',
-        description: 'Please provide both a schema and a natural language prompt.',
+        description: 'Please upload a schema file and provide a natural language prompt.',
       });
       return;
     }
@@ -118,8 +184,8 @@ export default function Home() {
 
           <TabsContent value="query" className="mt-6">
             <QueryTab
-              schema={schema}
-              setSchema={setSchema}
+              onFileUpload={handleFileUpload}
+              uploadedFileName={uploadedFileName}
               prompt={prompt}
               setPrompt={setPrompt}
               reportQuery={reportQuery}
