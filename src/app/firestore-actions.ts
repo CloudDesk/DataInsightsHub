@@ -8,12 +8,43 @@ export async function getSavedQueries(): Promise<SavedQuery[]> {
   try {
     const db = getDb();
     const queriesCollectionRef = collection(db, 'saved_queries');
-    const q = query(queriesCollectionRef, orderBy('createdAt', 'desc'));
+    const q = query(queriesCollectionRef); // Fetch all documents first
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      name: doc.data().name,
-      query: doc.data().query,
+    
+    // Map to an intermediate array with a potential `createdAt` field
+    const queriesWithTimestamp = querySnapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        name: data.name,
+        query: data.query,
+        createdAt: data.createdAt || null,
+      };
+    });
+
+    // Sort by createdAt descending. Documents without it are treated as older.
+    queriesWithTimestamp.sort((a, b) => {
+      if (a.createdAt && b.createdAt) {
+        // Both have timestamps, compare them
+        return b.createdAt.toMillis() - a.createdAt.toMillis();
+      }
+      if (a.createdAt) {
+        // Only 'a' has a timestamp, so it's newer
+        return -1;
+      }
+      if (b.createdAt) {
+        // Only 'b' has a timestamp, so it's newer
+        return 1;
+      }
+      // Neither has a timestamp, keep original order relative to each other
+      return 0;
+    });
+
+    // Return the sorted array, mapped to the final `SavedQuery` type
+    return queriesWithTimestamp.map(({ id, name, query }) => ({
+      id,
+      name,
+      query,
     }));
   } catch (error) {
     console.error("Error fetching saved queries from Firestore:", error);
