@@ -58,8 +58,9 @@ export default function Home() {
       return;
     }
     try {
-        const newQuery = await addSavedQuery(name, query);
-        setSavedQueries(prev => [newQuery, ...prev]);
+        await addSavedQuery(name, query);
+        const updatedQueries = await getSavedQueries();
+        setSavedQueries(updatedQueries);
         toast({
             title: 'Success',
             description: 'Query saved successfully to Firestore.'

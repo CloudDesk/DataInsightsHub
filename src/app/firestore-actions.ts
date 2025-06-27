@@ -27,16 +27,15 @@ export async function getSavedQueries(): Promise<SavedQuery[]> {
   }
 }
 
-export async function addSavedQuery(name: string, queryText: string): Promise<SavedQuery> {
+export async function addSavedQuery(name: string, queryText: string): Promise<void> {
     try {
         const db = getDb();
         const queriesCollectionRef = collection(db, 'saved_queries');
-        const docRef = await addDoc(queriesCollectionRef, {
+        await addDoc(queriesCollectionRef, {
             name: name,
             query: queryText,
             createdAt: serverTimestamp(),
         });
-        return { id: docRef.id, name, query: queryText };
     } catch (error) {
         console.error("Failed to save query to Firestore:", error);
         if (error instanceof Error) {
