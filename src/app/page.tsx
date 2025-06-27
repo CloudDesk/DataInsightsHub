@@ -121,14 +121,6 @@ export default function Home() {
   }
 
   const handleVerifyQuery = async (queryId: string, query: string) => {
-    if (!schema.trim()) {
-      toast({
-        variant: 'destructive',
-        title: 'Schema Missing',
-        description: 'Please upload a schema file before verifying a query.',
-      });
-      return;
-    }
     setVerifyingQueryId(queryId);
     setVerificationResult(prev => ({ ...prev, [queryId]: null }));
     try {

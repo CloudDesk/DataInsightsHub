@@ -12,7 +12,7 @@ import {z} from 'genkit';
 
 const VerifySqlQueryInputSchema = z.object({
   sqlQuery: z.string().describe('The SQL query to verify.'),
-  databaseSchemaDescription: z.string().describe('A description of the database schema.'),
+  databaseSchemaDescription: z.string().describe('A description of the database schema.').optional(),
 });
 export type VerifySqlQueryInput = z.infer<typeof VerifySqlQueryInputSchema>;
 
@@ -29,15 +29,21 @@ const prompt = ai.definePrompt({
   name: 'verifySqlQueryPrompt',
   input: {schema: VerifySqlQueryInputSchema},
   output: {schema: VerifySqlQueryOutputSchema},
-  prompt: `You are an expert SQL analyst. Your task is to analyze a given SQL query based on a provided database schema.
-
-Database Schema Description:
-{{{databaseSchemaDescription}}}
+  prompt: `You are an expert SQL analyst. Your task is to analyze a given SQL query.
 
 SQL Query to Verify:
 {{{sqlQuery}}}
 
-Please provide a concise explanation of what the query does. Point out any potential syntax errors, performance issues, or parts of the query that do not align with the provided schema. If the query is valid and well-formed, confirm its correctness.
+{{#if databaseSchemaDescription}}
+Analyze the query based on the following database schema.
+
+Database Schema Description:
+{{{databaseSchemaDescription}}}
+
+Please provide a concise explanation of what the query does. Point out any potential syntax errors, performance issues, or parts of the query that do not align with the provided schema. If the query is valid and well-formed according to the schema, confirm its correctness.
+{{else}}
+Please provide a concise explanation of what the query does. Analyze it for general SQL syntax correctness and potential performance issues. Since no schema was provided, you cannot verify table or column names.
+{{/if}}
 `,
 });
 
