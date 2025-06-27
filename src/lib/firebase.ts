@@ -13,7 +13,7 @@ const firebaseConfig = {
 // This check is important for debugging. It ensures that the app doesn't
 // fail silently if the environment variables are not set.
 if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
-  throw new Error('Firebase configuration is missing. Please create a .env.local file in the root of your project and add your Firebase project credentials. Some features may not work.');
+  console.warn('Firebase configuration is missing. Some features may not work. Please check your .env file.');
 }
 
 
