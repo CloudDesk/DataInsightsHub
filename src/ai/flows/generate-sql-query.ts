@@ -19,7 +19,8 @@ const GenerateSqlQueryInputSchema = z.object({
 export type GenerateSqlQueryInput = z.infer<typeof GenerateSqlQueryInputSchema>;
 
 const GenerateSqlQueryOutputSchema = z.object({
-  sqlQuery: z.string().describe('The generated SQL query.'),
+  reportQuery: z.string().describe('The generated SQL query for a detailed report.'),
+  dashboardQuery: z.string().describe('The generated SQL query for a summary dashboard visualization.'),
 });
 export type GenerateSqlQueryOutput = z.infer<typeof GenerateSqlQueryOutputSchema>;
 
@@ -31,15 +32,27 @@ const generateSqlQueryPrompt = ai.definePrompt({
   name: 'generateSqlQueryPrompt',
   input: {schema: GenerateSqlQueryInputSchema},
   output: {schema: GenerateSqlQueryOutputSchema},
-  prompt: `You are an expert SQL query generator.  Given a database schema and a natural language prompt, you will generate a valid SQL query to answer the prompt.
+  prompt: `You are an expert SQL query generator. Given a database schema and a natural language prompt, you will generate two separate SQL queries based on the same condition.
+
+1.  **Report Query**: This query should return detailed records that meet the user's condition. The output should include all relevant fields for each matching record.
+2.  **Dashboard Query**: This query should return a summary/aggregate count that can be visualized (e.g., in a bar or pie chart). It should include a count of records matching the condition, and a count of non-matching records as a comparison (e.g., labeled as "Others").
+
+**Examples:**
+
+*   **User prompt:** "Display all drivers who are age greater than 30."
+    *   **Report Query Goal:** Return all driver records where age > 30.
+    *   **Dashboard Query Goal:** Return count of drivers with age > 30 and count of others (age <= 30).
+*   **User prompt:** "Count the drivers who have rating 3 or above."
+    *   **Report Query Goal:** Return all driver records where rating >= 3.
+    *   **Dashboard Query Goal:** Return count of drivers with rating >= 3 and count of drivers with rating < 3.
+
+Always ensure both queries align with the intent of the user, but structure them for two different use cases: detailed tabular view (report) and high-level visual summary (dashboard).
 
 Database Schema:
-{{schema}}
+{{{schema}}}
 
 Natural Language Prompt:
-{{prompt}}
-
-SQL Query:
+{{{prompt}}}
 `,
 });
 

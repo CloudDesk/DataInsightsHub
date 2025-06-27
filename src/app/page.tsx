@@ -31,8 +31,10 @@ CREATE TABLE products (
 export default function Home() {
   const [schema, setSchema] = React.useState<string>(exampleSchema);
   const [prompt, setPrompt] = React.useState<string>('Show me total sales per category for the last quarter.');
-  const [sqlQuery, setSqlQuery] = React.useState<string>('');
-  const [queryResult, setQueryResult] = React.useState<QueryResult | null>(null);
+  const [reportQuery, setReportQuery] = React.useState<string>('');
+  const [dashboardQuery, setDashboardQuery] = React.useState<string>('');
+  const [reportResult, setReportResult] = React.useState<QueryResult | null>(null);
+  const [dashboardResult, setDashboardResult] = React.useState<QueryResult | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState('query');
   const { toast } = useToast();
@@ -48,23 +50,31 @@ export default function Home() {
     }
 
     setIsLoading(true);
-    setSqlQuery('');
-    setQueryResult(null);
+    setReportQuery('');
+    setDashboardQuery('');
+    setReportResult(null);
+    setDashboardResult(null);
 
     try {
       const result = await generateSqlQuery({ schema, prompt });
-      const generatedSql = result.sqlQuery;
-      setSqlQuery(generatedSql);
+      const { reportQuery: generatedReportQuery, dashboardQuery: generatedDashboardQuery } = result;
+      
+      setReportQuery(generatedReportQuery);
+      setDashboardQuery(generatedDashboardQuery);
 
-      if (generatedSql) {
-        const dbResult = await runQuery(generatedSql);
-        setQueryResult(dbResult);
+      if (generatedReportQuery && generatedDashboardQuery) {
+        const [reportDbResult, dashboardDbResult] = await Promise.all([
+          runQuery(generatedReportQuery),
+          runQuery(generatedDashboardQuery),
+        ]);
+        setReportResult(reportDbResult);
+        setDashboardResult(dashboardDbResult);
         setActiveTab('report');
       } else {
          toast({
           variant: 'destructive',
           title: 'SQL Generation Failed',
-          description: 'The AI could not generate a SQL query from your prompt.',
+          description: 'The AI could not generate one or both SQL queries from your prompt.',
         });
       }
     } catch (e) {
@@ -96,11 +106,11 @@ export default function Home() {
               <MessageSquare className="mr-2" />
               Query
             </TabsTrigger>
-            <TabsTrigger value="report" disabled={!queryResult}>
+            <TabsTrigger value="report" disabled={!reportResult}>
               <Table className="mr-2" />
               Report
             </TabsTrigger>
-            <TabsTrigger value="dashboard" disabled={!queryResult}>
+            <TabsTrigger value="dashboard" disabled={!dashboardResult}>
               <LineChart className="mr-2" />
               Dashboard
             </TabsTrigger>
@@ -112,16 +122,17 @@ export default function Home() {
               setSchema={setSchema}
               prompt={prompt}
               setPrompt={setPrompt}
-              sqlQuery={sqlQuery}
+              reportQuery={reportQuery}
+              dashboardQuery={dashboardQuery}
               isLoading={isLoading}
               onSubmit={handleGenerateQuery}
             />
           </TabsContent>
           <TabsContent value="report" className="mt-6">
-            <ReportTab queryResult={queryResult} isLoading={isLoading} />
+            <ReportTab queryResult={reportResult} isLoading={isLoading} />
           </TabsContent>
           <TabsContent value="dashboard" className="mt-6">
-            <DashboardTab queryResult={queryResult} isLoading={isLoading} />
+            <DashboardTab queryResult={dashboardResult} isLoading={isLoading} />
           </TabsContent>
         </Tabs>
       </div>
