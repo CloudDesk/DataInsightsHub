@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Loader2, Wand2, Plus, Trash2, Play } from 'lucide-react';
+import { Loader2, Wand2, Plus, Trash2, Play, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -14,7 +14,6 @@ import {
   DialogDescription,
   DialogFooter,
   DialogTrigger,
-  DialogClose
 } from '@/components/ui/dialog';
 import type { SavedQuery } from '@/app/page';
 
@@ -31,6 +30,9 @@ interface QueryTabProps {
   onAddQuery: (name: string, query: string) => void;
   onDeleteQuery: (id: string) => void;
   onRunRawQuery: (query: string) => void;
+  onVerifyQuery: (queryId: string, query: string) => void;
+  verificationResult: Record<string, string | null>;
+  verifyingQueryId: string | null;
 }
 
 function AddQueryDialog({ onSave }: { onSave: (name: string, query: string) => void }) {
@@ -85,7 +87,7 @@ function GenerateQueryView({
   onSubmit,
   reportQuery,
   dashboardQuery
-}: Omit<QueryTabProps, 'savedQueries' | 'onAddQuery' | 'onDeleteQuery' | 'onRunRawQuery'>) {
+}: Omit<QueryTabProps, 'savedQueries' | 'onAddQuery' | 'onDeleteQuery' | 'onRunRawQuery' | 'onVerifyQuery' | 'verificationResult' | 'verifyingQueryId'>) {
   return (
     <div className="space-y-6">
       <Card>
@@ -187,14 +189,14 @@ function GenerateQueryView({
   );
 }
 
-function RawQueryView({ savedQueries, onAddQuery, onDeleteQuery, onRunRawQuery, isLoading }: Pick<QueryTabProps, 'savedQueries' | 'onAddQuery' | 'onDeleteQuery' | 'onRunRawQuery' | 'isLoading'>) {
+function RawQueryView({ savedQueries, onAddQuery, onDeleteQuery, onRunRawQuery, onVerifyQuery, verificationResult, verifyingQueryId, isLoading }: Pick<QueryTabProps, 'savedQueries' | 'onAddQuery' | 'onDeleteQuery' | 'onRunRawQuery' | 'onVerifyQuery' | 'verificationResult' | 'verifyingQueryId' | 'isLoading'>) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
           <CardTitle>Raw SQL Queries</CardTitle>
           <CardDescription>
-            Manage and run your saved raw SQL queries directly.
+            Manage, run, and verify your saved raw SQL queries directly.
           </CardDescription>
         </div>
         <AddQueryDialog onSave={onAddQuery} />
@@ -208,19 +210,36 @@ function RawQueryView({ savedQueries, onAddQuery, onDeleteQuery, onRunRawQuery, 
           ) : (
             <div className="border rounded-md">
               {savedQueries.map((q, index) => (
-                <div key={q.id} className={`flex items-center justify-between p-4 ${index < savedQueries.length - 1 ? 'border-b' : ''}`}>
-                  <div className="flex-1">
-                    <p className="font-medium">{q.name}</p>
-                    <p className="text-sm text-muted-foreground font-mono truncate">{q.query}</p>
+                <div key={q.id} className={`${index < savedQueries.length - 1 ? 'border-b' : ''}`}>
+                  <div className="flex items-center justify-between p-4">
+                    <div className="flex-1 overflow-hidden">
+                      <p className="font-medium">{q.name}</p>
+                      <p className="text-sm text-muted-foreground font-mono truncate">{q.query}</p>
+                    </div>
+                    <div className="flex items-center space-x-2 ml-4">
+                      <Button variant="ghost" size="icon" onClick={() => onVerifyQuery(q.id, q.query)} disabled={isLoading || !!verifyingQueryId} aria-label="Verify Query">
+                        {verifyingQueryId === q.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <ShieldCheck className="h-4 w-4 text-blue-500" />
+                        )}
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => onRunRawQuery(q.query)} disabled={isLoading || !!verifyingQueryId} aria-label="Run Query">
+                          <Play className="h-4 w-4 text-green-500" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => onDeleteQuery(q.id)} disabled={isLoading || !!verifyingQueryId} aria-label="Delete Query">
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex items-center space-x-2 ml-4">
-                     <Button variant="ghost" size="icon" onClick={() => onRunRawQuery(q.query)} disabled={isLoading} aria-label="Run Query">
-                        <Play className="h-4 w-4 text-green-500" />
-                     </Button>
-                     <Button variant="ghost" size="icon" onClick={() => onDeleteQuery(q.id)} disabled={isLoading} aria-label="Delete Query">
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                     </Button>
-                  </div>
+                  {verificationResult[q.id] && (
+                    <div className="px-4 pb-4">
+                      <div className="mt-2 p-3 rounded-md bg-accent/20 border border-accent/50">
+                        <h4 className="font-semibold text-sm mb-2 text-foreground">Verification Result:</h4>
+                        <p className="text-sm text-muted-foreground whitespace-pre-wrap">{verificationResult[q.id]}</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

@@ -6,6 +6,7 @@ import * as XLSX from 'xlsx';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { generateSqlQuery } from '@/ai/flows/generate-sql-query';
+import { verifySqlQuery } from '@/ai/flows/verify-sql-query';
 import type { QueryResult } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { QueryTab } from '@/components/query-tab';
@@ -30,6 +31,8 @@ export default function Home() {
   const [isLoading, setIsLoading] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState('query');
   const [savedQueries, setSavedQueries] = React.useState<SavedQuery[]>([]);
+  const [verificationResult, setVerificationResult] = React.useState<Record<string, string | null>>({});
+  const [verifyingQueryId, setVerifyingQueryId] = React.useState<string | null>(null);
   const { toast } = useToast();
 
   React.useEffect(() => {
@@ -74,6 +77,11 @@ export default function Home() {
 
   const handleDeleteSavedQuery = (id: string) => {
     setSavedQueries(prev => prev.filter(q => q.id !== id));
+    setVerificationResult(prev => {
+      const newResults = { ...prev };
+      delete newResults[id];
+      return newResults;
+    });
     toast({
         title: 'Query Deleted',
         description: 'The saved query has been removed.',
@@ -111,6 +119,37 @@ export default function Home() {
       setIsLoading(false);
     }
   }
+
+  const handleVerifyQuery = async (queryId: string, query: string) => {
+    if (!schema.trim()) {
+      toast({
+        variant: 'destructive',
+        title: 'Schema Missing',
+        description: 'Please upload a schema file before verifying a query.',
+      });
+      return;
+    }
+    setVerifyingQueryId(queryId);
+    setVerificationResult(prev => ({ ...prev, [queryId]: null }));
+    try {
+      const result = await verifySqlQuery({
+        sqlQuery: query,
+        databaseSchemaDescription: schema,
+      });
+      setVerificationResult(prev => ({ ...prev, [queryId]: result.explanation }));
+    } catch (e) {
+      console.error(e);
+      const errorMessage = e instanceof Error ? e.message : 'An unexpected error occurred.';
+      toast({
+        variant: 'destructive',
+        title: 'Error Verifying Query',
+        description: errorMessage,
+      });
+      setVerificationResult(prev => ({ ...prev, [queryId]: `Error: ${errorMessage}` }));
+    } finally {
+      setVerifyingQueryId(null);
+    }
+  };
 
 
   const handleFileUpload = (file: File) => {
@@ -284,6 +323,9 @@ export default function Home() {
               onAddQuery={handleAddSavedQuery}
               onDeleteQuery={handleDeleteSavedQuery}
               onRunRawQuery={handleRunRawQuery}
+              onVerifyQuery={handleVerifyQuery}
+              verificationResult={verificationResult}
+              verifyingQueryId={verifyingQueryId}
             />
           </TabsContent>
           <TabsContent value="report" className="mt-6">
